@@ -1,31 +1,46 @@
 # %%
-from torch_geometric.datasets import Planetoid
-import torch_geometric.transforms as T
+from dataset import GraphDataset
 import torch
+from models import Model
+from tqdm.auto import tqdm
+import torch.nn.functional as F
+
+data = GraphDataset(dataset_name="Cora")
+data.print_dataset_info()
+
+max_hop = 3
+L = 2 * max_hop + 1
+
+data.set_input_list(max_hop=max_hop)
+print(len(data.input_list))
 
 
-def sparse_to_adjacency(edge_index):
-    adj_coo = torch.sparse_coo_tensor(
-        edge_index, values=torch.ones(edge_index.shape[1])
+model = Model(fan_in=data.n_feats, fan_middle=210, n_heads=L, n_class=data.n_class)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=5e-4)
+
+best_test_acc = 0
+t = tqdm(range(200))
+for epoch in t:
+    model.train()
+    out = model(data.input_list)
+    loss = F.nll_loss(out[data.train_mask], data.y[data.train_mask])
+    model.eval()
+    _, pred = model(data.input_list).max(dim=1)
+    correct = float(pred[data.test_mask].eq(data.y[data.test_mask]).sum().item())
+    acc = correct / data.test_mask.sum().item()
+
+    train_acc = (
+        float(pred[data.train_mask].eq(data.y[data.train_mask]).sum().item())
+        / data.train_mask.sum().item()
     )
-    A = adj_coo.to_dense()
-    return A
+    if acc > best_test_acc:
+        best_test_acc = acc
 
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
 
-def load_data(dataset_name, verbose=True):
-    dataset = Planetoid(root="datasets/", name=dataset_name)
-    dataset.transform = T.NormalizeFeatures()
-
-    data = dataset[0]
-    n_feats, n_class = dataset.num_node_features, dataset.num_classes
-
-    # TODO: replace this with logger, check end-to-end nlp video for this
-    if verbose:
-        print(f"Number of Classes in {dataset_name}:", dataset.num_classes)
-        print(f"Number of Node Features in {dataset_name}:", dataset.num_node_features)
-    return data, n_feats, n_class
-
-
-data, n_feats, n_class = load_data(dataset_name="Cora")
-A = sparse_to_adjacency(data.edge_index)
-X = data.x
+    t.set_description(
+        f"Loss: {loss:.4f}, Best Test Acc: {best_test_acc:.3f}, Train Acc: {train_acc:.3f}"
+    )
+# %%

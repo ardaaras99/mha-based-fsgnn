@@ -1,4 +1,3 @@
-# %%
 import torch
 
 
@@ -24,4 +23,9 @@ def get_input_list(A_sym, A_sym_tilde, X: torch.Tensor, k):
     return input_list
 
 
-# %%
+def sparse_to_adjacency(edge_index):
+    adj_coo = torch.sparse_coo_tensor(
+        edge_index, values=torch.ones(edge_index.shape[1])
+    )
+    A = adj_coo.to_dense()
+    return A
