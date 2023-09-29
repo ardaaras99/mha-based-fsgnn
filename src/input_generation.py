@@ -29,3 +29,22 @@ def sparse_to_adjacency(edge_index):
     )
     A = adj_coo.to_dense()
     return A
+
+
+def powers_of_A(A, k: int, type: str = "sym") -> dict:
+    A_dict = {}
+    A_dict[f"A_{type}^1"] = A
+    for i in range(2, k + 1):
+        A_dict[f"A_{type}^{i}"] = A_dict[f"A_{type}^{i-1}"] @ A
+    return A_dict
+
+
+def get_mask_matrix_list(A_sym, A_sym_tilde, max_hop: int):
+    d1 = powers_of_A(A_sym, k=max_hop, type="sym")
+    d2 = powers_of_A(A_sym_tilde, k=max_hop, type="sym_tilde")
+
+    mask_matrix_list = [torch.eye(A_sym.shape[0])]
+    for (k1, A_sym), (k2, A_sym_tilde) in zip(d1.items(), d2.items()):
+        mask_matrix_list.append(A_sym)
+        mask_matrix_list.append(A_sym_tilde)
+    return mask_matrix_list
