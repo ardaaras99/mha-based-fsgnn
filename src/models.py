@@ -74,8 +74,7 @@ class MHA(nn.Module):
         # for aggregation of heads
         ## input is H: [N, fan_out]
         ## output can be H_out: [N, arbitrary_dimension], this can be tuned, preserve as fan_out for now
-        arbitrary_dimension = config.fan_out
-        self.W_O = nn.Linear(config.fan_out, arbitrary_dimension, bias=False)
+        self.W_O = nn.Linear(head_dim * config.n_heads, config.fan_out, bias=False)
 
     def forward(self, input_list):
         out_list = []
@@ -114,7 +113,7 @@ class MLP(nn.Module):
             in_dim = hidden_dim
         l.append(nn.Linear(in_dim, config.out_dim))
         #! Last dropout layer added by Arda Can Aras
-        l.append(nn.Dropout(config.dropout))
+        # l.append(nn.Dropout(config.dropout))
 
         self.model = nn.Sequential(*l)
 
@@ -136,42 +135,22 @@ class MHAbasedFSGNN(nn.Module):
 
     def forward(self, X):
         X = self.MLP(X)
-        input_list = [X]
+        input_list = []
         for A in self.mha_config.mask_matrix_list:
             input_list.append(A @ X)
 
         out = self.mha(input_list)
         #! skip connection
-        assert X.shape == out.shape
-        out = X + out
+        # assert X.shape == out.shape
+        # out = X + out
 
         #! Retrieved from GAT architecture might not be necessary
-        out = self.ln(out)
-        out = F.elu(out)
-        out = F.dropout(out, p=0.6, training=self.training)
+        # Layer Normalization
+        # out = self.ln(out)
+        # L2 Normalization
+        out = F.normalize(out, p=2, dim=-1)
+        out = F.relu(out)
+        # out = F.dropout(out, p=0.6, training=self.training)
         out = self.clf_head(out)
-        out = F.log_softmax(out, dim=1)
-        return out
-
-
-class Model(nn.Module):
-    def __init__(self, fan_in: int, fan_middle: int, n_heads: int, n_class: int):
-        super(Model, self).__init__()
-        self.n_heads = n_heads
-
-        self.mha = MHA(fan_in=fan_in, fan_middle=fan_middle, n_heads=n_heads, p=0.6)
-        self.ln1 = nn.LayerNorm(fan_in)
-        self.ln2 = nn.LayerNorm(fan_middle)
-
-        self.proj_out = nn.Linear(fan_middle, n_class)
-
-    def forward(self, input_list):
-        input_list = [self.ln1(input_list[i]) for i in range(len(input_list))]
-        out = self.mha(input_list)
-        out = self.ln2(out)
-
-        out = F.elu(out)
-        out = F.dropout(out, p=0.6, training=self.training)
-        out = self.proj_out(out)
         out = F.log_softmax(out, dim=1)
         return out

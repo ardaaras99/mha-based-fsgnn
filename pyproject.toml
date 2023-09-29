@@ -13,6 +13,7 @@ torch = "2.0.0"
 matplotlib = "^3.7.2"
 ipykernel = "^6.25.1"
 torchvision = "0.15.1"
+wandb = "^0.15.11"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"

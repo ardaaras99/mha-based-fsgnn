@@ -26,6 +26,7 @@ class GraphDataset:
         dataset = Planetoid(
             root=self.root_dir, name=self.dataset_name, transform=T.NormalizeFeatures()
         )
+        self.dataset = dataset
         data = dataset[0]
 
         self.n_feats, self.n_class = dataset.num_node_features, dataset.num_classes
