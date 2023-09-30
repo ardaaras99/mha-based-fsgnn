@@ -1,0 +1,24 @@
+wandb_version: 1
+
+dataset:
+  value:
+    dataset_name: Cora
+    max_hop: 3
+mha:
+  value:
+    fan_in: 64
+    fan_out: 64
+    p: 0.4
+mlp:
+  value:
+    dropout: 0.5
+    hidden_dims: 300
+    out_dim: 64
+optimizer:
+  value:
+    lr: 0.001
+    weight_decay: 0.0005
+trainer_pipeline:
+  value:
+    max_epochs: 500
+    patience: 50

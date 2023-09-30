@@ -1,14 +1,9 @@
-from tqdm.auto import trange
-import torch
+# %%
 from pathlib import Path
+import torch
 import wandb
 import torch.nn.functional as F
 from tqdm.auto import tqdm
-import os
-import re
-import wandb
-import torch
-from pathlib import Path
 import copy
 from src.dataset import GraphDataset
 
@@ -39,28 +34,30 @@ class Trainer:
         t = tqdm(range(max_epochs))
         for epoch in t:
             self.model.train()
-            e_loss = self.train_epoch(data_key="train")
+            e_loss = self.train_epoch()
 
             train_acc, test_acc = self.eval_model(self.data)
 
             if wandb_flag:
-                self.epoch_wandb_log(loss=e_loss, test_acc=test_acc, epoch=epoch)
+                self.epoch_wandb_log(
+                    loss=e_loss, train_acc=train_acc, test_acc=test_acc, epoch=epoch
+                )
 
-            best_test_acc, _ = early_stopping(test_acc, self.model, epoch)
+            best_test_acc, best_model = early_stopping(test_acc, self.model, epoch)
             t.set_description(
                 f"Loss: {e_loss:.4f}, Best Test Acc: {best_test_acc:.3f}, Train Acc: {train_acc:.3f}"
             )
             if early_stopping.early_stop:
                 break
 
-        # self.pipeline_wandb_log(best_test_acc, best_model, sweep_id)
+        self.pipeline_wandb_log(best_test_acc, best_model, sweep_id)
 
-    def train_epoch(self, data_key: str = "train"):
+    def train_epoch(self):
         loss = 0
         # TODO: replace string check with enum
         self.model.train()
         out = self.model(self.data.X)
-        loss = F.nll_loss(out[self.data.test_mask], self.data.y[self.data.test_mask])
+        loss = F.nll_loss(out[self.data.train_mask], self.data.y[self.data.train_mask])
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
@@ -91,21 +88,29 @@ class Trainer:
         pass
 
     def save_checkpoint(self, test_acc: float, sweep_id: str):
-        test_acc = str(round(test_acc, 5)).replace(".", "_")
+        test_acc_str = str(round(test_acc, 5)).replace(".", "_")
 
-        MODELS_DIR = Path(__file__).parent.parent.joinpath("model_checkpoints")
+        MODELS_DIR = Path(__file__).parent.parent.parent.joinpath("model_checkpoints")
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
         SWEEP_ID_FOLDER = MODELS_DIR.joinpath(sweep_id)
         SWEEP_ID_FOLDER.mkdir(parents=True, exist_ok=True)
-        FILE_NAME = f"{self.model.model_name}-{test_acc}-{wandb.run.id}-ckpt.pth"
+        FILE_NAME = f"{wandb.run.id}-acc:{test_acc_str}-ckpt.pth"
 
         ckpt_path = Path.joinpath(MODELS_DIR, SWEEP_ID_FOLDER, FILE_NAME)
         torch.save(self.checkpoint, ckpt_path)
 
-    def epoch_wandb_log(self, loss, lr, fracs_d, epoch, test_acc):
-        log_train_parameters(loss=loss, lr=lr, fracs_d=fracs_d, epoch=epoch)
-        log_test_parameters(test_acc=test_acc, epoch=epoch)
+    def epoch_wandb_log(self, loss, train_acc, test_acc, epoch):
+        log_train_parameters(
+            loss=loss,
+            train_acc=train_acc,
+            epoch=epoch,
+        )
+
+        log_test_parameters(
+            test_acc=test_acc,
+            epoch=epoch,
+        )
 
     def pipeline_wandb_log(
         self, best_test_acc, best_model: torch.nn.Module, sweep_id: str
@@ -130,22 +135,9 @@ class Trainer:
 ## Utility functions for Trainer
 
 
-def str_to_acc(filename: str) -> float:
-    pattern = r"(\d+_\d+)"
-    match = re.search(pattern, filename)
-    if match:
-        extracted_value = match.group(1)
-        float_value = float(extracted_value.replace("_", "."))
-        return float_value
-
-
-def to_device(data, target, device):
-    return data.to(device), target.to(device)
-
-
-def log_train_parameters(loss: float, lr: float, epoch: int):
+def log_train_parameters(loss: float, train_acc: float, epoch: int):
     wandb.log(data={"train/loss": loss}, step=epoch)
-    wandb.log(data={"train/lr": lr}, step=epoch)
+    wandb.log(data={"train/train_acc": train_acc}, step=epoch)
 
 
 def log_test_parameters(test_acc: float, epoch: int):
@@ -157,16 +149,6 @@ def log_model_artifact(test_acc: str, ckpt_file: Path):
     artifact = wandb.Artifact(name=artifact_name, type="Model")
     artifact.add_file(ckpt_file)
     wandb.log_artifact(artifact)
-
-
-def get_existing_model(model_name: str, SAVE_DIR: Path):
-    files_in_dir = os.listdir(SAVE_DIR)
-
-    for file in files_in_dir:
-        if file.startswith(model_name):
-            best_acc = str_to_acc(filename=file)
-            best_model = torch.load(SAVE_DIR / file)
-            return best_acc, best_model
 
 
 class EarlyStopping:
@@ -193,3 +175,26 @@ class EarlyStopping:
                 print(f"Early stopping at epoch {epoch}")
 
         return self.best_test_acc, self.best_model
+
+
+# %%
+
+# def to_device(data, target, device):
+#     return data.to(device), target.to(device)
+
+# def get_existing_model(model_name: str, SAVE_DIR: Path):
+#     files_in_dir = os.listdir(SAVE_DIR)
+
+#     for file in files_in_dir:
+#         if file.startswith(model_name):
+#             best_acc = str_to_acc(filename=file)
+#             best_model = torch.load(SAVE_DIR / file)
+#             return best_acc, best_model
+
+# def str_to_acc(filename: str) -> float:
+#     pattern = r"(\d+_\d+)"
+#     match = re.search(pattern, filename)
+#     if match:
+#         extracted_value = match.group(1)
+#         float_value = float(extracted_value.replace("_", "."))
+#         return float_value

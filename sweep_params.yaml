@@ -1,0 +1,50 @@
+method: grid
+project: mha-based-fsgnn
+metric:
+  name: test/test_accuracy
+  goal: maximize
+
+# Parameter space to search
+parameters:
+  #nested parameter configuration
+  dataset:
+    parameters:
+      dataset_name:
+        value: "Cora"
+      max_hop:
+        value: 3
+
+  mha:
+    parameters:
+      fan_in:
+        value: 64
+      fan_out:
+        value: 64
+      p:
+        values: [0.4, 0.5,0.6]
+
+  mlp:
+    parameters:
+      hidden_dims:
+        value: 300
+      out_dim:
+        value: 64
+      dropout:
+        values: [0.5, 0.6, 0.7]
+  optimizer:
+    parameters:
+      # lr parameter is nested behind "optimizer"
+      lr:
+        values: [0.005, 0.001]
+      weight_decay:
+        value: 5e-4
+
+  trainer_pipeline:
+    parameters:
+      max_epochs:
+        value: 500
+      patience:
+        value: 50
+
+#! n_heads will be declared from max_hop in mainfile
+  

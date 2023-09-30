@@ -2,8 +2,8 @@
 import torch
 
 from src.dataset import GraphDataset
-from utils.input_generation import get_mask_matrix_list
-from models.models import MHAbasedFSGNN
+from src.dataset import get_mask_matrix_list
+from models import MHAbasedFSGNN
 from configurations.model_configs import MLPConfig, MHAConfig
 
 
@@ -39,7 +39,7 @@ model = MHAbasedFSGNN(
 
 optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
 
-from engine.trainer import Trainer
+from trainer import Trainer
 
 trainer = Trainer(model=model, optimizer=optimizer, data=data)
 

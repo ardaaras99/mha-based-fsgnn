@@ -5,25 +5,24 @@
 
 import torch
 import wandb
-import yaml
 import random
 import numpy as np
 
 
-from src.engine.trainer import Trainer
+from src.trainer import Trainer
 from src.configurations.model_configs import MHAConfig, MLPConfig
 from src.dataset import GraphDataset
-from src.utils.input_generation import get_mask_matrix_list
-from src.models.models import MHAbasedFSGNN
+from src.dataset import get_mask_matrix_list
+from src.models import MHAbasedFSGNN
 
 
-with open("src/configurations/sweep_config.yaml") as file:
-    sweep_config = yaml.load(file, Loader=yaml.FullLoader)
+import yaml
+
+with open("sweep_params.yaml") as file:
+    sweep_params = yaml.load(file, Loader=yaml.FullLoader)
 
 
 # %%
-
-
 def set_seeds():
     # torch.backends.cudnn.deterministic = True
     random.seed(hash("setting random seeds") % 2**32 - 1)
@@ -35,51 +34,53 @@ def set_seeds():
 set_seeds()
 
 
-def run_sweep(config: dict = None):
+def run_sweep(c: dict = None):
     global sweep_id
 
-    run = wandb.init(config=config)
-    config = wandb.config
+    run = wandb.init(config=c)
+    c = wandb.config
 
-    data = GraphDataset(dataset_name=config.dataset_name)
-    data.print_dataset_info()
-
-    max_hop = 2
-    L = 2 * max_hop + 1
+    data = GraphDataset(dataset_name=c.dataset["dataset_name"])
 
     mask_matrix_list = get_mask_matrix_list(
-        data.A_sym, data.A_sym_tilde, max_hop=max_hop
+        data.A_sym, data.A_sym_tilde, max_hop=c.dataset["max_hop"]
     )
-
-    #! Since we use skip connection, chose L wisely so that head concatenation will not reduce dimension
-    # for max_hop = 3, L = 7, if we choose fan_in = 64, we loose dimension
 
     mlp_config = MLPConfig(
         in_dim=data.n_feats,
-        hidden_dims=300,
-        out_dim=64,
-        dropout=0.5,
-        normalization=torch.nn.LayerNorm,
+        hidden_dims=c.mlp["hidden_dims"],
+        out_dim=c.mlp["out_dim"],
+        dropout=c.mlp["dropout"],
     )
 
     mha_config = MHAConfig(
-        fan_in=64, fan_out=64, n_heads=L, p=0.4, mask_matrix_list=mask_matrix_list
+        fan_in=c.mha["fan_in"],
+        fan_out=c.mha["fan_out"],
+        n_heads=c.dataset["max_hop"] * 2 + 1,
+        p=c.mha["p"],
+        mask_matrix_list=mask_matrix_list,
     )
 
     model = MHAbasedFSGNN(
         mlp_config=mlp_config, mha_config=mha_config, n_class=data.n_class
     )
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
-
-    from engine.trainer import Trainer
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=c.optimizer["lr"],
+        weight_decay=c.optimizer["weight_decay"],
+    )
 
     trainer = Trainer(model=model, optimizer=optimizer, data=data)
 
     trainer.pipeline(
-        max_epochs=500, patience=100, wandb_flag=False, early_stop_verbose=True
+        max_epochs=c.trainer_pipeline["max_epochs"],
+        patience=c.trainer_pipeline["patience"],
+        wandb_flag=True,
+        sweep_id=sweep_id,
+        early_stop_verbose=True,
     )
 
 
-sweep_id = wandb.sweep(sweep_config, project="mha-based-fsgnn")
-wandb.agent(sweep_id, function=run_sweep, count=4)
+sweep_id = wandb.sweep(sweep_params, project="mha-based-fsgnn")
+wandb.agent(sweep_id, function=run_sweep, count=6)

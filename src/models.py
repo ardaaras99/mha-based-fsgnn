@@ -143,7 +143,7 @@ class MHAbasedFSGNN(nn.Module):
             input_list.append(A @ X)
 
         out = self.mha(input_list)
-        #! skip connection
+        #! skip connection, we solve this problem with W_O, even we lose dimension, output projection will fix it
         # assert X.shape == out.shape
         # out = X + out
 
