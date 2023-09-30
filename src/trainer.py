@@ -11,7 +11,6 @@ from src.dataset import GraphDataset
 class Trainer:
     def __init__(
         self,
-        # TODO: add other possible model names here as typing
         model: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
         data: GraphDataset,
@@ -54,7 +53,6 @@ class Trainer:
 
     def train_epoch(self):
         loss = 0
-        # TODO: replace string check with enum
         self.model.train()
         out = self.model(self.data.X)
         loss = F.nll_loss(out[self.data.train_mask], self.data.y[self.data.train_mask])

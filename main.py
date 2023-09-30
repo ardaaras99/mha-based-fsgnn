@@ -46,7 +46,3 @@ trainer = Trainer(model=model, optimizer=optimizer, data=data)
 trainer.pipeline(
     max_epochs=500, patience=100, wandb_flag=False, early_stop_verbose=True
 )
-
-# %%
-
-# TODO: seedleme işini yap ve check et

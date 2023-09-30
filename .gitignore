@@ -164,3 +164,4 @@ poetry.lock
 *wandb/
 model_checkpoints/
 *.DS_Store
+*.vscode/
