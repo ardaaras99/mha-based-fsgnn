@@ -3,7 +3,7 @@ from torch.nn import functional as F
 import torch
 
 
-from src.model_configs import MLPConfig, MHAConfig
+from src.configurations.model_configs import MLPConfig, MHAConfig
 
 
 class Head(nn.Module):
@@ -24,7 +24,10 @@ class Head(nn.Module):
     def forward(self, X):
         K, Q, V = self.W_K(X), self.W_Q(X), self.W_V(X)
         E = (Q @ K.T) / (K.shape[-1] ** 0.5)
-        E = E.masked_fill(self.mask_matrix == 0, float("-inf"))
+
+        #! What should be attention masking when we pass X only without adjacency
+        if not torch.allclose(self.mask_matrix, torch.eye(self.mask_matrix.shape[0])):
+            E = E.masked_fill(self.mask_matrix == 0, float("-inf"))
         #! Attention output can be treated as soft adjacency matrix
         A_soft = F.softmax(E, dim=-1)
         H = A_soft @ V
@@ -135,7 +138,7 @@ class MHAbasedFSGNN(nn.Module):
 
     def forward(self, X):
         X = self.MLP(X)
-        input_list = []
+        input_list = [X]
         for A in self.mha_config.mask_matrix_list:
             input_list.append(A @ X)
 

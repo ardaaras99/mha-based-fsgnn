@@ -3,7 +3,7 @@ from pathlib import Path
 
 CURRENT_DIR = Path(__file__).parent
 
-from src.input_generation import (
+from src.utils.input_generation import (
     get_symmetric_adjacency,
     get_input_list,
     sparse_to_adjacency,

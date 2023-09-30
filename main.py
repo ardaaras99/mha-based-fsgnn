@@ -2,9 +2,9 @@
 import torch
 
 from src.dataset import GraphDataset
-from src.input_generation import get_mask_matrix_list
-from src.models import MHAbasedFSGNN
-from src.model_configs import MLPConfig, MHAConfig
+from utils.input_generation import get_mask_matrix_list
+from models.models import MHAbasedFSGNN
+from configurations.model_configs import MLPConfig, MHAConfig
 
 
 data = GraphDataset(dataset_name="Cora")
@@ -12,8 +12,8 @@ data.print_dataset_info()
 
 # %%
 
-max_hop = 3
-L = 2 * max_hop
+max_hop = 2
+L = 2 * max_hop + 1
 
 mask_matrix_list = get_mask_matrix_list(data.A_sym, data.A_sym_tilde, max_hop=max_hop)
 
@@ -23,14 +23,14 @@ mask_matrix_list = get_mask_matrix_list(data.A_sym, data.A_sym_tilde, max_hop=ma
 
 mlp_config = MLPConfig(
     in_dim=data.n_feats,
-    hidden_dims=None,
+    hidden_dims=300,
     out_dim=64,
     dropout=0.5,
     normalization=torch.nn.LayerNorm,
 )
 
 mha_config = MHAConfig(
-    fan_in=64, fan_out=64, n_heads=L, p=0.6, mask_matrix_list=mask_matrix_list
+    fan_in=64, fan_out=64, n_heads=L, p=0.4, mask_matrix_list=mask_matrix_list
 )
 
 model = MHAbasedFSGNN(
@@ -39,10 +39,14 @@ model = MHAbasedFSGNN(
 
 optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
 
-from trainer import Trainer
+from engine.trainer import Trainer
 
 trainer = Trainer(model=model, optimizer=optimizer, data=data)
 
-trainer.pipeline(max_epochs=200, patience=80, wandb_flag=False, early_stop_verbose=True)
+trainer.pipeline(
+    max_epochs=500, patience=100, wandb_flag=False, early_stop_verbose=True
+)
 
 # %%
+
+# TODO: seedleme işini yap ve check et

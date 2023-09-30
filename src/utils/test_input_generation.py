@@ -1,6 +1,6 @@
 import unittest
 import torch
-import src.input_generation as ig
+import utils.input_generation as ig
 
 
 class TestGetInputList(unittest.TestCase):
