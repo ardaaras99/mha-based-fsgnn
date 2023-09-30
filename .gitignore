@@ -163,4 +163,4 @@ datasets/
 poetry.lock
 *wandb/
 model_checkpoints/
-.DS_Store
+*.DS_Store
