@@ -145,7 +145,7 @@ class MHAbasedFSGNN(nn.Module):
         out = self.mha(input_list)
         #! skip connection, we solve this problem with W_O, even we lose dimension, output projection will fix it
         # assert X.shape == out.shape
-        # out = X + out
+        out = X + out
 
         #! Retrieved from GAT architecture might not be necessary
         # Layer Normalization

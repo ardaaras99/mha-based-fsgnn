@@ -90,7 +90,7 @@ class Trainer:
     def save_checkpoint(self, test_acc: float, sweep_id: str):
         test_acc_str = str(round(test_acc, 5)).replace(".", "_")
 
-        MODELS_DIR = Path(__file__).parent.parent.parent.joinpath("model_checkpoints")
+        MODELS_DIR = Path(__file__).parent.parent.joinpath("model_checkpoints")
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
         SWEEP_ID_FOLDER = MODELS_DIR.joinpath(sweep_id)

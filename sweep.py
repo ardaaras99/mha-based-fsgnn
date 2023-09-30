@@ -32,6 +32,8 @@ def set_seeds():
 
 
 set_seeds()
+# TODO: bu seedleri bir sayı seçip onu kullanmak lazım hep, sonradan aynı parametrelerle aynı resultı almamız lazım
+# TODO: gpuya bir şey koymadım macte yazıyordum, zaten aşırı basit yapması modeli ve matrixleri gpuya koycan o kadar
 
 
 def run_sweep(c: dict = None):
