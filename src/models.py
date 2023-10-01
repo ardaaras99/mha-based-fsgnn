@@ -125,10 +125,17 @@ class MLP(nn.Module):
 
 
 class MHAbasedFSGNN(nn.Module):
-    def __init__(self, mlp_config: MLPConfig, mha_config: MHAConfig, n_class: int):
+    def __init__(
+        self,
+        mlp_config: MLPConfig,
+        mha_config: MHAConfig,
+        n_class: int,
+        skip_connection: bool = True,
+    ):
         super(MHAbasedFSGNN, self).__init__()
 
         self.mha_config = mha_config
+        self.skip_connection = skip_connection
 
         self.MLP = MLP(config=mlp_config)
         self.mha = MHA(config=mha_config)
@@ -145,7 +152,8 @@ class MHAbasedFSGNN(nn.Module):
         out = self.mha(input_list)
         #! skip connection, we solve this problem with W_O, even we lose dimension, output projection will fix it
         # assert X.shape == out.shape
-        out = X + out
+        if self.skip_connection:
+            out = X + out
 
         #! Retrieved from GAT architecture might not be necessary
         # Layer Normalization

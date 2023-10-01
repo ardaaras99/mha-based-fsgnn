@@ -62,7 +62,10 @@ def run_sweep(c: dict = None):
     )
 
     model = MHAbasedFSGNN(
-        mlp_config=mlp_config, mha_config=mha_config, n_class=data.n_class
+        mlp_config=mlp_config,
+        mha_config=mha_config,
+        n_class=data.n_class,
+        skip_connection=c.skip_connection,
     )
 
     optimizer = torch.optim.Adam(
@@ -83,4 +86,4 @@ def run_sweep(c: dict = None):
 
 
 sweep_id = wandb.sweep(sweep_params, project="mha-based-fsgnn")
-wandb.agent(sweep_id, function=run_sweep, count=6)
+wandb.agent(sweep_id, function=run_sweep)

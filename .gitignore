@@ -165,3 +165,4 @@ poetry.lock
 model_checkpoints/
 *.DS_Store
 *.vscode/
+*report/

@@ -49,7 +49,8 @@ class Trainer:
             if early_stopping.early_stop:
                 break
 
-        self.pipeline_wandb_log(best_test_acc, best_model, sweep_id)
+        if wandb_flag:
+            self.pipeline_wandb_log(best_test_acc, best_model, sweep_id)
 
     def train_epoch(self):
         loss = 0

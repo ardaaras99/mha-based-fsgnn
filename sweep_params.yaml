@@ -12,7 +12,7 @@ parameters:
       dataset_name:
         value: "Cora"
       max_hop:
-        value: 3
+        values: [2,3,4,5,6,7,8]
 
   mha:
     parameters:
@@ -21,21 +21,21 @@ parameters:
       fan_out:
         value: 64
       p:
-        values: [0.4, 0.5,0.6]
+        values: [0.4,0.5,0.6, 0.7]
 
   mlp:
     parameters:
       hidden_dims:
-        value: 300
+        values: [500,300]
       out_dim:
         value: 64
       dropout:
-        values: [0.5, 0.6, 0.7]
+        values: [0.4,0.5, 0.6, 0.7]
   optimizer:
     parameters:
       # lr parameter is nested behind "optimizer"
       lr:
-        values: [0.005, 0.001]
+        values: [0.001, 0.005, 0.001, 0.0005]
       weight_decay:
         value: 5e-4
 
@@ -44,7 +44,12 @@ parameters:
       max_epochs:
         value: 500
       patience:
-        value: 50
+        value: 70
 
-#! n_heads will be declared from max_hop in mainfile
+  skip_connection:
+    values: [True, False]
+
+#! n_heads will be declared from max_hop in sweep.py
+#! if skip connection is enabled, fan_out of mha must be equal to out_dim of mlp
+#! fan_in of mha must be equal to out_dim of mlp
   
