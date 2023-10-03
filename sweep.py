@@ -15,8 +15,12 @@ from src.dataset import GraphDataset
 from src.dataset import get_mask_matrix_list
 from src.models import MHAbasedFSGNN
 
-
 import yaml
+
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+
+print(device)
 
 with open("sweep_params.yaml") as file:
     sweep_params = yaml.load(file, Loader=yaml.FullLoader)
@@ -46,6 +50,8 @@ def run_sweep(c: dict = None):
         data.A_sym, data.A_sym_tilde, max_hop=c.dataset["max_hop"]
     )
 
+    mask_matrix_list = [m.to(device) for m in mask_matrix_list]
+
     mlp_config = MLPConfig(
         in_dim=data.n_feats,
         hidden_dims=c.mlp["hidden_dims"],
@@ -68,6 +74,8 @@ def run_sweep(c: dict = None):
         skip_connection=c.skip_connection,
     )
 
+    model.to(device)
+    
     optimizer = torch.optim.Adam(
         model.parameters(),
         lr=c.optimizer["lr"],

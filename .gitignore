@@ -166,3 +166,4 @@ model_checkpoints/
 *.DS_Store
 *.vscode/
 *report/
+src/.DS_Store

@@ -7,13 +7,13 @@ from tqdm.auto import tqdm
 import copy
 from src.dataset import GraphDataset
 
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class Trainer:
     def __init__(
         self,
         model: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
-        data: GraphDataset,
+        data: GraphDataset
     ):
         self.model = model
         self.optimizer = optimizer
@@ -24,12 +24,13 @@ class Trainer:
         self,
         max_epochs: int,
         patience: int,
-        wandb_flag: bool = False,
+        wandb_flag: bool = True,
         sweep_id: str = None,
         early_stop_verbose: bool = False,
     ):
         early_stopping = EarlyStopping(patience=patience, verbose=early_stop_verbose)
 
+        print('wandb_flag ist ',wandb_flag)
         t = tqdm(range(max_epochs))
         for epoch in t:
             self.model.train()
@@ -55,6 +56,9 @@ class Trainer:
     def train_epoch(self):
         loss = 0
         self.model.train()
+
+        self.data.X = self.data.X.to(device)  
+        self.data.y = self.data.y.to(device)
         out = self.model(self.data.X)
         loss = F.nll_loss(out[self.data.train_mask], self.data.y[self.data.train_mask])
         self.optimizer.zero_grad()
