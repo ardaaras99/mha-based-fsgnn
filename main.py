@@ -7,17 +7,21 @@ from src.configurations.model_configs import MLPConfig, MHAConfig
 import random
 import numpy as np
 
+
+#! This file used for debugging purposes only, to run sweep experiments use sweep.py
+
+
 def set_seeds(seed):
-  random.seed(seed)
-  np.random.seed(seed) 
-  torch.manual_seed(seed)
-  torch.cuda.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
 
 
 set_seeds(42)
 
-#! This file used for debugging purposes only, to run sweep experiments use sweep.py
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print(device)
 data = GraphDataset(dataset_name="Cora")
@@ -48,7 +52,6 @@ model = MHAbasedFSGNN(
     mha_config=mha_config,
     n_class=data.n_class,
     skip_connection=True,
-
 )
 model.to(device)
 

@@ -23,15 +23,14 @@ with open("sweep_params.yaml") as file:
 
 
 # %%
-def set_seeds():
-    # torch.backends.cudnn.deterministic = True
-    random.seed(hash("setting random seeds") % 2**32 - 1)
-    np.random.seed(hash("improves reproducibility") % 2**32 - 1)
-    torch.manual_seed(hash("by removing stochasticity") % 2**32 - 1)
-    torch.cuda.manual_seed_all(hash("so runs are repeatable") % 2**32 - 1)
+def set_seeds(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
 
 
-set_seeds()
+set_seeds(42)
 
 
 def run_sweep(c: dict = None):
@@ -54,7 +53,7 @@ def run_sweep(c: dict = None):
     )
 
     mha_config = MHAConfig(
-        fan_in=c.mha["fan_in"],
+        fan_in=c.mlp["out_dim"],
         fan_out=c.mha["fan_out"],
         n_heads=c.dataset["max_hop"] * 2 + 1,
         p=c.mha["p"],

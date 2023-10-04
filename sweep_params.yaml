@@ -16,8 +16,9 @@ parameters:
 
   mha:
     parameters:
-      fan_in:
-        value: 64
+    #! fan in does not need to be parameter, it depends on out_dim of mlp
+      #fan_in:
+        #value: 64
       fan_out:
         value: 64
       p:
