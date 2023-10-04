@@ -24,12 +24,13 @@ class Trainer:
         self,
         max_epochs: int,
         patience: int,
-        wandb_flag: bool = False,
+        wandb_flag: bool = True,
         sweep_id: str = None,
         early_stop_verbose: bool = False,
     ):
         early_stopping = EarlyStopping(patience=patience, verbose=early_stop_verbose)
 
+        print('wandb_flag ist ',wandb_flag)
         t = tqdm(range(max_epochs))
         for epoch in t:
             self.model.train()
