@@ -33,6 +33,21 @@ def set_seeds(seed):
 set_seeds(42)
 
 
+# Calculate mask matrix list combinations up to 8th power
+
+
+def calculate_all_combinations(dataset_name="Cora", max_of_max_hop: int = 8):
+    data = GraphDataset(dataset_name=dataset_name)
+    all_combinations = {}
+    for i in range(max_of_max_hop + 1):
+        all_combinations[f"up to {i}"] = get_mask_matrix_list(
+            data.A_sym, data.A_sym_tilde, max_hop=i
+        )
+
+
+all_c = calculate_all_combinations(dataset_name="Cora", max_of_max_hop=8)
+
+
 def run_sweep(c: dict = None):
     global sweep_id
 
@@ -41,9 +56,11 @@ def run_sweep(c: dict = None):
 
     data = GraphDataset(dataset_name=c.dataset["dataset_name"])
 
-    mask_matrix_list = get_mask_matrix_list(
-        data.A_sym, data.A_sym_tilde, max_hop=c.dataset["max_hop"]
-    )
+    # mask_matrix_list = get_mask_matrix_list(
+    #     data.A_sym, data.A_sym_tilde, max_hop=c.dataset["max_hop"]
+    # )
+
+    mask_matrix_list = all_c[f"up to {c.dataset['max_hop']}"]
 
     mlp_config = MLPConfig(
         in_dim=data.n_feats,
