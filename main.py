@@ -7,6 +7,16 @@ from src.configurations.model_configs import MLPConfig, MHAConfig
 import random
 import numpy as np
 
+import yaml
+
+with open("sweep_params.yaml") as f:
+    sweep_config = yaml.load(f, Loader=yaml.FullLoader)
+
+# Extract configs
+mlp_config = sweep_config['mlp'] 
+mha_config = sweep_config['mha']
+dataset_config = sweep_config['dataset']
+
 
 def set_seeds(seed):
   random.seed(seed)
@@ -21,12 +31,15 @@ set_seeds(42)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
 
 print(device)
-data = GraphDataset(dataset_name="Cora")
+data = GraphDataset(dataset_name=dataset_config['dataset_name'])
+
 data.print_dataset_info()
+
+
 
 # %%
 
-max_hop = 2
+max_hop = dataset_config['max_hop']
 L = 2 * max_hop + 1
 
 mask_matrix_list = get_mask_matrix_list(data.A_sym, data.A_sym_tilde, max_hop=max_hop)
@@ -34,14 +47,17 @@ mask_matrix_list = [m.to(device) for m in mask_matrix_list]
 
 mlp_config = MLPConfig(
     in_dim=data.n_feats,
-    hidden_dims=500,
-    out_dim=64,
-    dropout=0.5,
-    normalization=torch.nn.LayerNorm,
+    hidden_dims=mlp_config['hidden_dims'], 
+    out_dim=mlp_config['out_dim'],
+    dropout=mlp_config['dropout']
 )
 
 mha_config = MHAConfig(
-    fan_in=64, fan_out=64, n_heads=L, p=0.4, mask_matrix_list=mask_matrix_list
+    fan_in=mlp_config['out_dim'],
+    fan_out=mha_config['fan_out'],
+    n_heads=L,
+    p=mha_config['p'],
+    mask_matrix_list=mask_matrix_list
 )
 
 model = MHAbasedFSGNN(

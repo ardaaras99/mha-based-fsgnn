@@ -14,7 +14,7 @@ from src.configurations.model_configs import MHAConfig, MLPConfig
 from src.dataset import GraphDataset
 from src.dataset import get_mask_matrix_list
 from src.models import MHAbasedFSGNN
-
+import os
 import yaml
 
 
@@ -27,29 +27,18 @@ with open("sweep_params.yaml") as file:
 
 
 # %%
-def set_seeds(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
+def set_seeds():
+    # torch.backends.cudnn.deterministic = True
+    random.seed(hash("setting random seeds") % 2**32 - 1)
+    np.random.seed(hash("improves reproducibility") % 2**32 - 1)
+    torch.manual_seed(hash("by removing stochasticity") % 2**32 - 1)
+    torch.cuda.manual_seed_all(hash("so runs are repeatable") % 2**32 - 1)
 
 
-set_seeds(42)
+set_seeds()
 
 
-# Calculate mask matrix list combinations up to 8th power
 
-
-def calculate_all_combinations(dataset_name="Cora", max_of_max_hop: int = 8):
-    data = GraphDataset(dataset_name=dataset_name)
-    all_combinations = {}
-    for i in range(max_of_max_hop + 1):
-        all_combinations[f"up to {i}"] = get_mask_matrix_list(
-            data.A_sym, data.A_sym_tilde, max_hop=i
-        )
-
-
-all_c = calculate_all_combinations(dataset_name="Cora", max_of_max_hop=8)
 
 
 def run_sweep(c: dict = None):
@@ -60,11 +49,40 @@ def run_sweep(c: dict = None):
 
     data = GraphDataset(dataset_name=c.dataset["dataset_name"])
 
-    # mask_matrix_list = get_mask_matrix_list(
-    #     data.A_sym, data.A_sym_tilde, max_hop=c.dataset["max_hop"]
-    # )
+    A_sym = data.A_sym
+    A_sym_tilde = data.A_sym_tilde
 
-    mask_matrix_list = all_c[f"up to {c.dataset['max_hop']}"]
+    mask_matrix_cache_file = 'mask_matrix_cache.npy'
+
+
+    if os.path.exists(mask_matrix_cache_file):
+        print('Loading pre-computed mask matrix cache') 
+        MASK_MATRIX_CACHE = np.load(mask_matrix_cache_file).item()
+
+    else:
+        print('Gening mask mat')
+
+        MASK_MATRIX_CACHE = {}
+        
+        max_hops = [2,3,4,5,6,7,8]
+
+        for max_hop in max_hops:
+        
+            mask_matrix_list = get_mask_matrix_list(A_sym, A_sym_tilde, max_hop=max_hop)
+
+            MASK_MATRIX_CACHE[max_hop] = mask_matrix_list
+
+        np.save('mask_matrix_cache.npy', MASK_MATRIX_CACHE)
+        print('Cache saved to mask_matrix_cache.npy')
+
+    
+
+
+    max_hop = c.dataset["max_hop"]
+    mask_matrix_list = MASK_MATRIX_CACHE[max_hop]    
+
+    #mask_matrix_list = get_mask_matrix_list(
+        #data.A_sym, data.A_sym_tilde, max_hop=c.dataset["max_hop"])
 
     mask_matrix_list = [m.to(device) for m in mask_matrix_list]
 
@@ -76,7 +94,7 @@ def run_sweep(c: dict = None):
     )
 
     mha_config = MHAConfig(
-        fan_in=c.mlp["out_dim"],
+        fan_in=c.mha["fan_in"],
         fan_out=c.mha["fan_out"],
         n_heads=c.dataset["max_hop"] * 2 + 1,
         p=c.mha["p"],
@@ -111,3 +129,5 @@ def run_sweep(c: dict = None):
 
 sweep_id = wandb.sweep(sweep_params, project="mha-based-fsgnn")
 wandb.agent(sweep_id, function=run_sweep)
+
+# %%
