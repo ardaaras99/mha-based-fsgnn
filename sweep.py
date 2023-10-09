@@ -57,7 +57,7 @@ def run_sweep(c: dict = None):
 
     if os.path.exists(mask_matrix_cache_file):
         print('Loading pre-computed mask matrix cache') 
-        MASK_MATRIX_CACHE = np.load(mask_matrix_cache_file).item()
+        MASK_MATRIX_CACHE = np.load(mask_matrix_cache_file, allow_pickle=True).item()
 
     else:
         print('Gening mask mat')
