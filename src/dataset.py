@@ -40,11 +40,16 @@ class GraphDataset:
 # Utility functions
 
 
+def custom_reciprocal(x: torch.Tensor, eps: float = 1e-6) -> torch.Tensor:
+    return torch.where(torch.abs(x) < eps, 0, torch.reciprocal(x))
+
+
 def get_symmetric_adjacency(A, self_loop: bool):
     if self_loop:
         A = A + torch.eye(A.shape[0])
     D = torch.diag(torch.sum(A, dim=1))
-    D_neg_half = torch.inverse(torch.sqrt(D))
+    D = torch.sqrt(D)
+    D_neg_half = custom_reciprocal(D)
     A_sym = D_neg_half @ A @ D_neg_half
     return A_sym
 

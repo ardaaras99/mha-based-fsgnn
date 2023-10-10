@@ -1,45 +1,38 @@
 # %%
 import torch
+import random
+import numpy as np
+import yaml
+
 from src.trainer import Trainer
 from src.dataset import GraphDataset, get_mask_matrix_list
 from src.models import MHAbasedFSGNN
 from src.configurations.model_configs import MLPConfig, MHAConfig
-import random
-import numpy as np
+from src.utils import set_seeds, get_device
 
-import yaml
+#! This file used for debugging purposes only, to run sweep experiments use sweep.py
+
 
 with open("sweep_params.yaml") as f:
     sweep_config = yaml.load(f, Loader=yaml.FullLoader)
 
-# Extract configs
-mlp_config = sweep_config['mlp'] 
-mha_config = sweep_config['mha']
-dataset_config = sweep_config['dataset']
-
-
-def set_seeds(seed):
-  random.seed(seed)
-  np.random.seed(seed) 
-  torch.manual_seed(seed)
-  torch.cuda.manual_seed(seed)
-
-
 set_seeds(42)
-
-#! This file used for debugging purposes only, to run sweep experiments use sweep.py
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
-
+device = get_device()
 print(device)
-data = GraphDataset(dataset_name=dataset_config['dataset_name'])
 
+# Extract configs
+mlp_config = sweep_config["mlp"]
+mha_config = sweep_config["mha"]
+dataset_config = sweep_config["dataset"]
+
+
+data = GraphDataset(dataset_name=dataset_config["dataset_name"])
 data.print_dataset_info()
-
 
 
 # %%
 
-max_hop = dataset_config['max_hop']
+max_hop = dataset_config["max_hop"]
 L = 2 * max_hop + 1
 
 mask_matrix_list = get_mask_matrix_list(data.A_sym, data.A_sym_tilde, max_hop=max_hop)
@@ -47,17 +40,17 @@ mask_matrix_list = [m.to(device) for m in mask_matrix_list]
 
 mlp_config = MLPConfig(
     in_dim=data.n_feats,
-    hidden_dims=mlp_config['hidden_dims'], 
-    out_dim=mlp_config['out_dim'],
-    dropout=mlp_config['dropout']
+    hidden_dims=mlp_config["hidden_dims"],
+    out_dim=mlp_config["out_dim"],
+    dropout=mlp_config["dropout"],
 )
 
 mha_config = MHAConfig(
-    fan_in=mlp_config['out_dim'],
-    fan_out=mha_config['fan_out'],
+    fan_in=mlp_config["out_dim"],
+    fan_out=mha_config["fan_out"],
     n_heads=L,
-    p=mha_config['p'],
-    mask_matrix_list=mask_matrix_list
+    p=mha_config["p"],
+    mask_matrix_list=mask_matrix_list,
 )
 
 model = MHAbasedFSGNN(
@@ -65,7 +58,6 @@ model = MHAbasedFSGNN(
     mha_config=mha_config,
     n_class=data.n_class,
     skip_connection=True,
-
 )
 model.to(device)
 

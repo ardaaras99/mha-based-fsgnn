@@ -1,44 +1,27 @@
 # %%
 # from dotenv import load_dotenv
-
 # load_dotenv()
 
 import torch
 import wandb
-import random
-import numpy as np
+import yaml
+from pathlib import Path
 
 
 from src.trainer import Trainer
 from src.configurations.model_configs import MHAConfig, MLPConfig
 from src.dataset import GraphDataset
-from src.dataset import get_mask_matrix_list
 from src.models import MHAbasedFSGNN
-import os
-import yaml
+from src.utils import set_seeds, get_device
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+device = get_device()
+set_seeds(seed_no=42)
 
 print(device)
 
 with open("sweep_params.yaml") as file:
     sweep_params = yaml.load(file, Loader=yaml.FullLoader)
-
-
-# %%
-def set_seeds():
-    # torch.backends.cudnn.deterministic = True
-    random.seed(hash("setting random seeds") % 2**32 - 1)
-    np.random.seed(hash("improves reproducibility") % 2**32 - 1)
-    torch.manual_seed(hash("by removing stochasticity") % 2**32 - 1)
-    torch.cuda.manual_seed_all(hash("so runs are repeatable") % 2**32 - 1)
-
-
-set_seeds()
-
-
-
 
 
 def run_sweep(c: dict = None):
@@ -47,43 +30,15 @@ def run_sweep(c: dict = None):
     run = wandb.init(config=c)
     c = wandb.config
 
-    data = GraphDataset(dataset_name=c.dataset["dataset_name"])
+    dataset_name = c.dataset["dataset_name"]
+    data = GraphDataset(dataset_name=dataset_name)
 
-    A_sym = data.A_sym
-    A_sym_tilde = data.A_sym_tilde
+    MASK_MATRIX_CACHE_DIR = (
+        Path.cwd() / "mask_matrix_cache" / f"{dataset_name}_mask_matrix_list.pth"
+    )
 
-    mask_matrix_cache_file = 'mask_matrix_cache.npy'
-
-
-    if os.path.exists(mask_matrix_cache_file):
-        print('Loading pre-computed mask matrix cache') 
-        MASK_MATRIX_CACHE = np.load(mask_matrix_cache_file, allow_pickle=True).item()
-
-    else:
-        print('Gening mask mat')
-
-        MASK_MATRIX_CACHE = {}
-        
-        max_hops = [2,3,4,5,6,7,8]
-
-        for max_hop in max_hops:
-        
-            mask_matrix_list = get_mask_matrix_list(A_sym, A_sym_tilde, max_hop=max_hop)
-
-            MASK_MATRIX_CACHE[max_hop] = mask_matrix_list
-
-        np.save('mask_matrix_cache.npy', MASK_MATRIX_CACHE)
-        print('Cache saved to mask_matrix_cache.npy')
-
-    
-
-
-    max_hop = c.dataset["max_hop"]
-    mask_matrix_list = MASK_MATRIX_CACHE[max_hop]    
-
-    #mask_matrix_list = get_mask_matrix_list(
-        #data.A_sym, data.A_sym_tilde, max_hop=c.dataset["max_hop"])
-
+    mask_matrix_list_full = torch.load(MASK_MATRIX_CACHE_DIR)
+    mask_matrix_list = mask_matrix_list_full[: 2 * c.dataset["max_hop"] + 1]
     mask_matrix_list = [m.to(device) for m in mask_matrix_list]
 
     mlp_config = MLPConfig(
@@ -93,8 +48,9 @@ def run_sweep(c: dict = None):
         dropout=c.mlp["dropout"],
     )
 
+    fan_in = c.mlp["out_dim"]
     mha_config = MHAConfig(
-        fan_in=c.mha["fan_in"],
+        fan_in=fan_in,
         fan_out=c.mha["fan_out"],
         n_heads=c.dataset["max_hop"] * 2 + 1,
         p=c.mha["p"],
@@ -109,7 +65,7 @@ def run_sweep(c: dict = None):
     )
 
     model.to(device)
-    
+
     optimizer = torch.optim.Adam(
         model.parameters(),
         lr=c.optimizer["lr"],
