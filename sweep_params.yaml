@@ -10,38 +10,37 @@ parameters:
   dataset:
     parameters:
       dataset_name:
-        value: "Cora"
+        value: "Citeseer"
       max_hop:
         values: [2,3,4,5,6,7,8]
 
   mlp:
     parameters:
       hidden_dims:
-        max: 600
         min: 100
+        max: 600
       out_dim:
         value: 64
       dropout:
-        max: 0.9
         min: 0.5
+        max: 0.9
 
   mha:
     parameters:
       fan_out:
         values: [64,128,256]
       p:
-        max: 0.9
         min: 0.5
+        max: 0.9
 
   optimizer:
     parameters:
-      # lr parameter is nested behind "optimizer"
       lr:
-        max: 0.01
         min: 0.0001
-      weight_decay:
         max: 0.01
-        mix: 0.0001
+      weight_decay:
+        min: 0.0001
+        max: 0.01
 
   trainer_pipeline:
     parameters:
