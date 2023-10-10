@@ -4,6 +4,7 @@ import torch
 
 
 from src.configurations.model_configs import MLPConfig, MHAConfig
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -27,7 +28,10 @@ class Head(nn.Module):
         E = (Q @ K.T) / (K.shape[-1] ** 0.5)
 
         #! What should be attention masking when we pass X only without adjacency
-        if not torch.allclose(self.mask_matrix, torch.eye(self.mask_matrix.shape[0]).to(self.mask_matrix.device)):
+        if not torch.allclose(
+            self.mask_matrix,
+            torch.eye(self.mask_matrix.shape[0]).to(self.mask_matrix.device),
+        ):
             E = E.masked_fill(self.mask_matrix == 0, float("-inf"))
         #! Attention output can be treated as soft adjacency matrix
         A_soft = F.softmax(E, dim=-1)
@@ -81,7 +85,6 @@ class MHA(nn.Module):
         self.W_O = nn.Linear(head_dim * config.n_heads, config.fan_out, bias=False)
 
     def forward(self, input_list):
-
         self.to(device)
         input_list = [x.to(device) for x in input_list]
         out_list = []
@@ -165,7 +168,6 @@ class MHAbasedFSGNN(nn.Module):
         # L2 Normalization
         out = F.normalize(out, p=2, dim=-1)
         out = F.relu(out)
-        # out = F.dropout(out, p=0.6, training=self.training)
         out = self.clf_head(out)
         out = F.log_softmax(out, dim=1)
         return out

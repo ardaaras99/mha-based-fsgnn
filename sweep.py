@@ -14,6 +14,7 @@ from src.dataset import GraphDataset
 from src.models import MHAbasedFSGNN
 from src.utils import set_seeds, get_device
 
+# %%
 
 device = get_device()
 set_seeds(seed_no=42)
@@ -38,7 +39,12 @@ def run_sweep(c: dict = None):
     )
 
     mask_matrix_list_full = torch.load(MASK_MATRIX_CACHE_DIR)
-    mask_matrix_list = mask_matrix_list_full[: 2 * c.dataset["max_hop"] + 1]
+    L = c.dataset["max_hop"] * 2 + 1
+    if dataset_name == "Citeseer":
+        mask_matrix_list = mask_matrix_list_full[:L:2]
+        #! if we use citeseer, we skip power of A_sym since it is problematic, we only use A_sym_tilde powers
+        L = len(mask_matrix_list)
+
     mask_matrix_list = [m.to(device) for m in mask_matrix_list]
 
     mlp_config = MLPConfig(
@@ -52,7 +58,7 @@ def run_sweep(c: dict = None):
     mha_config = MHAConfig(
         fan_in=fan_in,
         fan_out=c.mha["fan_out"],
-        n_heads=c.dataset["max_hop"] * 2 + 1,
+        n_heads=L,
         p=c.mha["p"],
         mask_matrix_list=mask_matrix_list,
     )

@@ -17,12 +17,11 @@ parameters:
   mlp:
     parameters:
       hidden_dims:
-        min: 100
-        max: 600
+        values: [300,500]
       out_dim:
-        value: 64
+        values: [64,128,256]
       dropout:
-        min: 0.5
+        min: 0.4
         max: 0.9
 
   mha:
@@ -30,7 +29,7 @@ parameters:
       fan_out:
         values: [64,128,256]
       p:
-        min: 0.5
+        min: 0.4
         max: 0.9
 
   optimizer:
@@ -40,14 +39,14 @@ parameters:
         max: 0.01
       weight_decay:
         min: 0.0001
-        max: 0.01
+        max: 0.001
 
   trainer_pipeline:
     parameters:
       max_epochs:
         value: 500
       patience:
-        value: 70
+        value: 30
 
   skip_connection:
     value: False
