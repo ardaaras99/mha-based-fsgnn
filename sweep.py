@@ -1,20 +1,18 @@
-# %%
-# from dotenv import load_dotenv
-# load_dotenv()
-
 import torch
 import wandb
 import yaml
-from pathlib import Path
 
 
 from src.trainer import Trainer
-from src.configurations.model_configs import MHAConfig, MLPConfig
-from src.dataset import GraphDataset
 from src.models import MHAbasedFSGNN
-from src.utils import set_seeds, get_device
+from src.utils import (
+    set_seeds,
+    get_device,
+    save_checkpoint,
+    get_configs,
+    get_used_params,
+)
 
-# %%
 
 device = get_device()
 set_seeds(seed_no=42)
@@ -31,37 +29,7 @@ def run_sweep(c: dict = None):
     run = wandb.init(config=c)
     c = wandb.config
 
-    dataset_name = c.dataset["dataset_name"]
-    data = GraphDataset(dataset_name=dataset_name)
-
-    MASK_MATRIX_CACHE_DIR = (
-        Path.cwd() / "mask_matrix_cache" / f"{dataset_name}_mask_matrix_list.pth"
-    )
-
-    mask_matrix_list_full = torch.load(MASK_MATRIX_CACHE_DIR)
-    L = c.dataset["max_hop"] * 2 + 1
-    if dataset_name == "Citeseer":
-        mask_matrix_list = mask_matrix_list_full[:L:2]
-        #! if we use citeseer, we skip power of A_sym since it is problematic, we only use A_sym_tilde powers
-        L = len(mask_matrix_list)
-
-    mask_matrix_list = [m.to(device) for m in mask_matrix_list]
-
-    mlp_config = MLPConfig(
-        in_dim=data.n_feats,
-        hidden_dims=c.mlp["hidden_dims"],
-        out_dim=c.mlp["out_dim"],
-        dropout=c.mlp["dropout"],
-    )
-
-    fan_in = c.mlp["out_dim"]
-    mha_config = MHAConfig(
-        fan_in=fan_in,
-        fan_out=c.mha["fan_out"],
-        n_heads=L,
-        p=c.mha["p"],
-        mask_matrix_list=mask_matrix_list,
-    )
+    mlp_config, mha_config, data = get_configs(c, device)
 
     model = MHAbasedFSGNN(
         mlp_config=mlp_config,
@@ -84,12 +52,15 @@ def run_sweep(c: dict = None):
         max_epochs=c.trainer_pipeline["max_epochs"],
         patience=c.trainer_pipeline["patience"],
         wandb_flag=True,
-        sweep_id=sweep_id,
         early_stop_verbose=True,
     )
+
+    used_params = get_used_params(c)
+
+    ckpt = dict(trainer=trainer, params=used_params)
+    wandb.log(data={"test/best_test_acc": trainer.best_test_acc})
+    save_checkpoint(ckpt, data.dataset_name, trainer.best_test_acc, sweep_id)
 
 
 sweep_id = wandb.sweep(sweep_params, project="mha-based-fsgnn")
 wandb.agent(sweep_id, function=run_sweep)
-
-# %%

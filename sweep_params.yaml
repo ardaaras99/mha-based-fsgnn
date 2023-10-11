@@ -1,5 +1,4 @@
 method: random
-project: mha-based-fsgnn
 metric:
   name: test/test_accuracy
   goal: maximize
@@ -17,29 +16,29 @@ parameters:
   mlp:
     parameters:
       hidden_dims:
-        values: [300,500]
+        value: 256
       out_dim:
-        values: [64,128,256]
+        value: 128
       dropout:
-        min: 0.4
+        min: 0.1
         max: 0.9
 
   mha:
     parameters:
       fan_out:
-        values: [64,128,256]
+        value: 128
       p:
-        min: 0.4
+        min: 0.1
         max: 0.9
 
   optimizer:
     parameters:
       lr:
-        min: 0.0001
+        min: 0.00001
         max: 0.01
       weight_decay:
-        min: 0.0001
-        max: 0.001
+        min: 0.00001
+        max: 0.01
 
   trainer_pipeline:
     parameters:
@@ -51,7 +50,4 @@ parameters:
   skip_connection:
     value: False
 
-#! n_heads will be declared from max_hop in sweep.py
-#! if skip connection is enabled, fan_out of mha must be equal to out_dim of mlp
-#! fan_in of mha must be equal to out_dim of mlp
   

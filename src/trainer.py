@@ -20,14 +20,12 @@ class Trainer:
         self.model = model
         self.optimizer = optimizer
         self.data = data
-        self.checkpoint = {}
 
     def pipeline(
         self,
         max_epochs: int,
         patience: int,
         wandb_flag: bool = True,
-        sweep_id: str = None,
         early_stop_verbose: bool = False,
     ):
         early_stopping = EarlyStopping(patience=patience, verbose=early_stop_verbose)
@@ -40,19 +38,18 @@ class Trainer:
             train_acc, test_acc = self.eval_model(self.data)
 
             if wandb_flag:
-                self.epoch_wandb_log(
-                    loss=e_loss, train_acc=train_acc, test_acc=test_acc, epoch=epoch
-                )
+                epoch_wandb_log(e_loss, train_acc, test_acc, epoch)
 
             best_test_acc, best_model = early_stopping(test_acc, self.model, epoch)
             t.set_description(
                 f"Loss: {e_loss:.4f}, Best Test Acc: {best_test_acc:.3f}, Train Acc: {train_acc:.3f}"
             )
+
             if early_stopping.early_stop:
                 break
 
-        if wandb_flag:
-            self.pipeline_wandb_log(best_test_acc, best_model, sweep_id)
+        self.best_model = best_model
+        self.best_test_acc = best_test_acc
 
     def train_epoch(self):
         loss = 0
@@ -87,75 +84,16 @@ class Trainer:
 
             return 100.0 * train_acc, 100.0 * test_acc
 
-    def test_batch(self):
-        pass
-
-    def train_batch(self):
-        #! for graph datasets, we do not use batch approach currently
-        pass
-
-    def save_checkpoint(self, test_acc: float, sweep_id: str):
-        test_acc_str = str(round(test_acc, 5)).replace(".", "_")
-
-        MODELS_DIR = Path(__file__).parent.parent.joinpath("model_checkpoints")
-        MODELS_DIR.mkdir(parents=True, exist_ok=True)
-
-        SWEEP_ID_FOLDER = MODELS_DIR.joinpath(sweep_id)
-        SWEEP_ID_FOLDER.mkdir(parents=True, exist_ok=True)
-        FILE_NAME = f"{wandb.run.id}-acc:{test_acc_str}-ckpt.pth"
-
-        ckpt_path = Path.joinpath(MODELS_DIR, SWEEP_ID_FOLDER, FILE_NAME)
-        torch.save(self.checkpoint, ckpt_path)
-
-    def epoch_wandb_log(self, loss, train_acc, test_acc, epoch):
-        log_train_parameters(
-            loss=loss,
-            train_acc=train_acc,
-            epoch=epoch,
-        )
-
-        log_test_parameters(
-            test_acc=test_acc,
-            epoch=epoch,
-        )
-
-    def pipeline_wandb_log(
-        self, best_test_acc, best_model: torch.nn.Module, sweep_id: str
-    ):
-        self.checkpoint["best_test_acc"] = best_test_acc
-        self.checkpoint["model"] = best_model
-        self.checkpoint["model_state_dict"] = best_model.state_dict()
-        self.save_checkpoint(best_test_acc, sweep_id)
-        wandb.log(data={"test/best_test_acc": best_test_acc})
-
-    # def sanity_check(self, best_model, best_test_acc):
-    #     """
-    #     A sanity check for the test accuracy of the best model, use it if you want to be sure
-    #     """
-    #     self.model = copy.deepcopy(best_model)
-    #     acc_new = self.test(data_key="test")
-    #     print(f"Best test accs: {best_test_acc}, {acc_new}")
-
 
 # %%
 
 ## Utility functions for Trainer
 
 
-def log_train_parameters(loss: float, train_acc: float, epoch: int):
+def epoch_wandb_log(loss, train_acc, test_acc, epoch):
     wandb.log(data={"train/loss": loss}, step=epoch)
     wandb.log(data={"train/train_acc": train_acc}, step=epoch)
-
-
-def log_test_parameters(test_acc: float, epoch: int):
     wandb.log(data={"test/test_accuracy": test_acc}, step=epoch)
-
-
-def log_model_artifact(test_acc: str, ckpt_file: Path):
-    artifact_name = f"{wandb.run.id}_{ckpt_file.stem}_{test_acc}"
-    artifact = wandb.Artifact(name=artifact_name, type="Model")
-    artifact.add_file(ckpt_file)
-    wandb.log_artifact(artifact)
 
 
 class EarlyStopping:
