@@ -11,11 +11,11 @@ from src.utils import (
     save_checkpoint,
     get_configs,
     get_used_params,
+    find_best_run,
 )
 
 
 device = get_device()
-set_seeds(seed_no=42)
 
 print(device)
 
@@ -24,6 +24,7 @@ with open("sweep_params.yaml") as file:
 
 
 def run_sweep(c: dict = None):
+    set_seeds(seed_no=42)
     global sweep_id
 
     run = wandb.init(config=c)
@@ -55,11 +56,15 @@ def run_sweep(c: dict = None):
         early_stop_verbose=True,
     )
 
-    used_params = get_used_params(c)
+    existing_best_test_acc, _ = find_best_run(target_dataset=c.dataset["dataset_name"])
 
-    ckpt = dict(trainer=trainer, params=used_params)
+    if existing_best_test_acc < trainer.best_test_acc:
+        "We find new best model, saving it..."
+        used_params = get_used_params(c)
+        ckpt = dict(trainer=trainer, params=used_params)
+        save_checkpoint(ckpt, data.dataset_name, trainer.best_test_acc, sweep_id)
+
     wandb.log(data={"test/best_test_acc": trainer.best_test_acc})
-    save_checkpoint(ckpt, data.dataset_name, trainer.best_test_acc, sweep_id)
 
 
 sweep_id = wandb.sweep(sweep_params, project="mha-based-fsgnn")

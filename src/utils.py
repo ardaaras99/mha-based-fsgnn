@@ -78,7 +78,7 @@ def find_best_run(target_dataset: str):
             "in the directory structure.",
         )
 
-    return highest_accuracy_folder, highest_accuracy_file
+    return highest_accuracy, highest_accuracy_file
 
 
 def get_configs(c, device):
