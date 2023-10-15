@@ -42,7 +42,7 @@ def find_best_run(target_dataset: str):
     # Define the base directory where your model_checkpoints are located
     base_directory = Path.joinpath(PROJECT_PATH, "model_checkpoints")
     highest_accuracy = 0.0
-    highest_accuracy_folder = None
+    highest_accuracy_file = None
 
     # Iterate through the subfolders of the specified dataset
     dataset_directory = base_directory / target_dataset
@@ -61,15 +61,15 @@ def find_best_run(target_dataset: str):
                             accuracy = float(accuracy_str)
                             if accuracy > highest_accuracy:
                                 highest_accuracy = accuracy
-                                highest_accuracy_folder = subfolder
                                 highest_accuracy_file = file_path
                         except ValueError:
                             pass
+                    else:
+                        print("Currently no model saved in the directory structure.")
 
     # Print the highest accuracy and its corresponding folder
-    if highest_accuracy_folder:
+    if highest_accuracy_file is not None:
         print("Highest Accuracy for", target_dataset, ":", highest_accuracy)
-        print("Folder Path:", highest_accuracy_folder)
         print("File Path:", highest_accuracy_file)
     else:
         print(

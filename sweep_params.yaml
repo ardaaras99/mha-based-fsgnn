@@ -9,7 +9,7 @@ parameters:
   dataset:
     parameters:
       dataset_name:
-        value: "Citeseer"
+        value: "Cora"
       max_hop:
         values: [3,4,5,6]
 
